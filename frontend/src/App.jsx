@@ -84,15 +84,15 @@ function App() {
   return (
     <div className="max-w-[800px] my-0 mx-auto p-8">
       <header className='text-center mb-8 pb-4 border-b-2 border-blue-500'>
-        <h1 className='text-5xl font-bold m-0 text-blue-500'>📊 Monitor de Cauciones</h1>
+        <h1 className='text-5xl font-bold m-0 text-blue-500 dark:text-blue-100'>📊 Monitor de Cauciones</h1>
         <p className="text-gray-400 mt-4"> Caución a 1 día</p>
       </header>
 
       <main>
         {/* Configuración de umbrales */}
-        <div className="bg-blue-800/60 border border-gray-600 rounded-lg p-6 mb-6 shadow-lg text-center">
+        <div className="bg-blue-800/60 border border-gray-600 rounded-lg p-6 mb-6 shadow-lg text-center dark:text-gray-200">
           <h3>🎯 Umbrales de Alerta</h3>
-          <div className="flex gap-8 justify-center flex-wrap mt-5">
+          <div className="flex gap-8 justify-center flex-wrap mt-5 dark:text-white">
             <label htmlFor="umbral-min">
               📉 Mínimo:
               <input
@@ -125,7 +125,7 @@ function App() {
         </div>
 
         {/* Mostrar la tasa actual */}
-        <div className="bg-blue-800/60 rounded border border-blue-500 shadow-md flex flex-col items-center py-4">
+        <div className="bg-blue-800/60 rounded shadow-md flex flex-col items-center py-4">
           {loading && !tasa ? (
             <div className="text-black font-bold">Cargando...</div>
           ) : error ? (
@@ -141,7 +141,7 @@ function App() {
                 tasa >= umbralMax ? 'text-red-600' : 
                 tasa <= umbralMin ? 'text-green-300' : ''
               }`}>
-                <span className="text-5xl text-amber-400">{tasa.toFixed(2)}</span>
+                <span className="text-5xl text-amber-400 mr-2">{tasa.toFixed(2)}</span>
                 <span className="text-3xl text-amber-400">%</span>
               </div>
               <div className="text-center">
@@ -162,7 +162,7 @@ function App() {
                   </p>
                 )}
               </div>
-              <button onClick={obtenerCotizacion} className="bg-green-600 text-white rounded-lg shadow border border-blue-300 hover:bg-green-200 hover:text-black transition-all duration-300" disabled={loading}>
+              <button onClick={obtenerCotizacion} className="bg-green-600 text-white rounded-lg shadow border border-blue-300 hover:bg-green-200 hover:text-black transition-all duration-300 mt-4" disabled={loading}>
                 {loading ? 'Actualizando...' : '🔄 Actualizar'}
               </button>
             </>
@@ -170,7 +170,7 @@ function App() {
         </div>
 
         {/* Información adicional */}
-        <div className="bg-blue-800/70 mt-5 rounded-lg shadow-lg px-6 py-4">
+        <div className="bg-blue-800/70 mt-5 rounded-lg shadow-lg px-6 py-4 dark:text-gray-300">
           <h3 onClick={handleHidden} className='w-full'>ℹ️ Información </h3>
           <div className={`${info ? "opacity-100 h-[100%]" : "opacity-0 h-0"} transition-all duration-300`} >
           <ul className='flex flex-col gap-4 mt-4'>
