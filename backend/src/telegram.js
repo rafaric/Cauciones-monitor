@@ -15,6 +15,12 @@ let chatId = null;
  * Inicializa el bot de Telegram con comandos interactivos
  */
 export function initTelegram() {
+  console.log('🔍 DEBUG - Verificando variables de entorno:');
+  console.log('- TELEGRAM_BOT_TOKEN existe:', !!process.env.TELEGRAM_BOT_TOKEN);
+  console.log('- TELEGRAM_CHAT_ID existe:', !!process.env.TELEGRAM_CHAT_ID);
+  console.log('- TOKEN length:', process.env.TELEGRAM_BOT_TOKEN?.length || 0);
+  console.log('- CHAT_ID value:', process.env.TELEGRAM_CHAT_ID);
+  
   const token = process.env.TELEGRAM_BOT_TOKEN;
   chatId = process.env.TELEGRAM_CHAT_ID;
   
