@@ -1,8 +1,8 @@
 
 [phases.setup]
-nixPkgs = [
 	"nodejs",
 	"python3",
+	"chromium",
 	"glib",
 	"nss",
 	"atk",
