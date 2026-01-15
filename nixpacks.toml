@@ -1,6 +1,6 @@
-
 [phases.setup]
-nixPkgs = ["nodejs", "python3", "chromium", "glib", "nss", "atk", "cups", "pango", "libxcomposite", "libxdamage", "libxrandr", "libgbm", "libasound", "libxshmfence", "libxinerama", "libxext", "libxfixes", "libxi", "libxtst", "libappindicator-gtk3", "libdrm", "libdbusmenu", "libgtk-3"]
+nixPkgs = ["nodejs", "chromium"]
+
 [phases.install]
 cmds = ["cd backend && npm install"]
 
@@ -8,4 +8,8 @@ cmds = ["cd backend && npm install"]
 cmds = ["echo 'Build complete'"]
 
 [start]
-cmd = "node backend/src/index.js"
+cmd = "cd backend && node src/index.js"
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/nix/store/*-chromium-*/bin/chromium"
