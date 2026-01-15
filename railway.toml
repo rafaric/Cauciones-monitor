@@ -2,7 +2,6 @@
 builder = "NIXPACKS"
 
 [deploy]
-workingDirectory = "backend"
-startCommand = "node src/index.js"
+startCommand = "node backend/src/index.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

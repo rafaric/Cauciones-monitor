@@ -4,5 +4,8 @@ nixPkgs = ["nodejs", "python3"]
 [phases.install]
 cmds = ["cd backend && npm install"]
 
+[phases.build]
+cmds = ["echo 'Build complete'"]
+
 [start]
-cmd = "cd backend && node src/index.js"
+cmd = "node backend/src/index.js"
