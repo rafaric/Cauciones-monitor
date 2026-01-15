@@ -1,5 +1,6 @@
 [phases.setup]
-nixPkgs = ["nodejs", "glib", "nss", "nspr", "atk", "cups", "libdrm", "libxkbcommon", "libxdamage", "libxrandr", "mesa", "gtk3", "pango", "cairo", "alsa-lib", "expat", "dbus"]
+nixPkgs = ["nodejs"]
+nixLibs = ["glib", "nss", "nspr", "atk", "cups", "gtk3", "pango", "cairo", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "libdrm", "mesa", "expat", "alsa-lib"]
 
 [phases.install]
 cmds = ["cd backend && npm install"]
