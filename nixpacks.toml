@@ -1,5 +1,31 @@
+
 [phases.setup]
-nixPkgs = ["nodejs", "python3"]
+nixPkgs = [
+	"nodejs",
+	"python3",
+	"glib",
+	"nss",
+	"atk",
+	"cups",
+	"pango",
+	"libxcomposite",
+	"libxdamage",
+	"libxrandr",
+	"libgbm",
+	"libasound",
+	"libxshmfence",
+	"libxinerama",
+	"libxext",
+	"libxfixes",
+	"libxi",
+	"libxtst",
+	"ca-certificates",
+	"fonts-liberation",
+	"libappindicator-gtk3",
+	"libdrm",
+	"libdbusmenu",
+	"libgtk-3"
+]
 
 [phases.install]
 cmds = ["cd backend && npm install"]
