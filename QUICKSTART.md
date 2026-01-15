@@ -16,11 +16,15 @@ git push -u origin main
 1. Ve a [railway.app](https://railway.app)
 2. New Project → Deploy from GitHub
 3. Selecciona `cauciones-monitor`
-4. Variables:
+4. **Configuración (importante):**
+   - Ve a Settings → Build
+   - Root Directory: deja vacío (usa nixpacks.toml automáticamente)
+5. **Variables de entorno:**
    - `PORT=3000`
    - `TELEGRAM_BOT_TOKEN=8543457906:AAGCy0041_ZOxL_WeoGsZQexMeCpyGO6Qx0`
    - `TELEGRAM_CHAT_ID=875428409`
-5. Copia tu URL: `https://xxx.up.railway.app`
+6. Guarda y espera el deploy (~3 min)
+7. Copia tu URL: `https://xxx.up.railway.app`
 
 ## Paso 3: Vercel - Frontend (2 min)
 
