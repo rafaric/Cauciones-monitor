@@ -17,7 +17,7 @@ async function initBrowser() {
       }
     }
     
-    const launchOptions = {
+    browser = await puppeteer.launch({
       headless: true,
       args: [
         '--no-sandbox',
@@ -25,14 +25,7 @@ async function initBrowser() {
         '--disable-dev-shm-usage',
         '--disable-gpu'
       ]
-    };
-    
-    // En Railway, usar el chromium del sistema si está disponible
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    }
-    
-    browser = await puppeteer.launch(launchOptions);
+    });
   }
   return browser;
 }
