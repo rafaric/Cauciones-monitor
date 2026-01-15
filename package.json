@@ -1,0 +1,14 @@
+{
+  "name": "cauciones-app",
+  "version": "1.0.0",
+  "description": "Monitor de Cauciones - Full Stack App",
+  "scripts": {
+    "dev": "./start.sh",
+    "dev:backend": "cd backend && node src/index.js",
+    "dev:frontend": "cd frontend && bun run dev",
+    "install:all": "cd backend && bun install && cd ../frontend && bun install"
+  },
+  "keywords": ["cauciones", "scraping", "react", "express"],
+  "author": "Rafael Rico",
+  "license": "MIT"
+}
