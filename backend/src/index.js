@@ -1,3 +1,101 @@
+// --- Histórico de tasas monitoreadas (persistencia simple en memoria y archivo) ---
+import fs from 'fs';
+import path from 'path';
+const HISTORICO_PATH = path.join(process.cwd(), 'backend', 'historico.json');
+let historicoTasas = [];
+
+// Cargar histórico desde archivo al iniciar
+try {
+  if (fs.existsSync(HISTORICO_PATH)) {
+    historicoTasas = JSON.parse(fs.readFileSync(HISTORICO_PATH, 'utf8'));
+  }
+} catch (e) {
+  historicoTasas = [];
+}
+
+function guardarHistorico() {
+  try {
+    fs.writeFileSync(HISTORICO_PATH, JSON.stringify(historicoTasas, null, 2), 'utf8');
+  } catch (e) {
+    console.error('No se pudo guardar el histórico:', e.message);
+  }
+}
+
+function agregarRegistroHistorico(tasa, fecha) {
+  const registro = {
+    hora: new Date(fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+    tasa,
+    timestamp: fecha
+  };
+  historicoTasas.push(registro);
+  guardarHistorico();
+}
+// --- Monitoreo autónomo de tasa y alertas ---
+let estadoAnterior = 'dentro'; // 'dentro', 'fuera-alta', 'fuera-baja'
+let ultimaAlerta = null;
+
+function enHorarioMercado() {
+  const ahora = new Date();
+  const hora = ahora.getHours();
+  const minutos = ahora.getMinutes();
+  return (
+    (hora === 11 && minutos >= 0) ||
+    (hora > 11 && hora < 17) ||
+    (hora === 17 && minutos <= 30)
+  );
+}
+
+async function monitorearTasa() {
+  if (!enHorarioMercado()) {
+    // Resetear estado si salimos del horario de mercado
+    estadoAnterior = 'dentro';
+    return;
+  }
+  try {
+    const datos = await getCaucionA1Dia();
+    const { tasa } = datos;
+    const { umbralMin, umbralMax } = getConfig();
+    let estadoActual = 'dentro';
+
+    // Guardar en histórico cada vez que se monitorea
+    agregarRegistroHistorico(tasa, Date.now());
+/**
+ * Endpoint para obtener el histórico de tasas monitoreadas
+ */
+app.get('/api/historico', (req, res) => {
+  // Opcional: filtrar por día
+  const { dia } = req.query;
+  if (dia) {
+    const fechaFiltro = new Date(dia).toDateString();
+    const filtrado = historicoTasas.filter(r => new Date(r.timestamp).toDateString() === fechaFiltro);
+    return res.json(filtrado);
+  }
+  res.json(historicoTasas);
+});
+
+    if (tasa >= umbralMax) {
+      estadoActual = 'fuera-alta';
+      if (estadoAnterior === 'dentro' || estadoAnterior === 'fuera-baja') {
+        await enviarAlerta(tasa, 'alta', umbralMin, umbralMax);
+        ultimaAlerta = Date.now();
+      }
+    } else if (tasa <= umbralMin) {
+      estadoActual = 'fuera-baja';
+      if (estadoAnterior === 'dentro' || estadoAnterior === 'fuera-alta') {
+        await enviarAlerta(tasa, 'baja', umbralMin, umbralMax);
+        ultimaAlerta = Date.now();
+      }
+    }
+    estadoAnterior = estadoActual;
+  } catch (err) {
+    console.error('Error en monitoreo automático:', err.message);
+  }
+}
+
+// Ejecutar monitoreo cada 5 minutos
+setInterval(monitorearTasa, 5 * 60 * 1000);
+// Ejecutar al iniciar
+monitorearTasa();
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';

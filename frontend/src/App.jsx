@@ -1,44 +1,37 @@
 import { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
-import './App.css'
+import "./App.css";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cauciones-monitor-production.up.railway.app';
 const API_URL = `${API_BASE_URL}/api/caucion`;
-const INTERVALO_CONSULTA = 5 * 60 * 1000; // 5 minutos
 const UMBRAL_MIN_DEFAULT = 35; // Tasa mínima por defecto
 const UMBRAL_MAX_DEFAULT = 50; // Tasa máxima por defecto
 
 function App() {
+  const [info, SetInfo] = useState(false)
   const [tasa, setTasa] = useState(null);
-  const [umbralMin, setUmbralMin] = useState(() => {
-    const saved = localStorage.getItem('umbralMin');
-    return saved ? parseFloat(saved) : UMBRAL_MIN_DEFAULT;
-  });
-  const [umbralMax, setUmbralMax] = useState(() => {
-    const saved = localStorage.getItem('umbralMax');
-    return saved ? parseFloat(saved) : UMBRAL_MAX_DEFAULT;
-  });
+  const [umbralMin, setUmbralMin] = useState(UMBRAL_MIN_DEFAULT);
+  const [umbralMax, setUmbralMax] = useState(UMBRAL_MAX_DEFAULT);
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [esSimulado, setEsSimulado] = useState(false);
-  const [historico, setHistorico] = useState(() => {
-    const saved = localStorage.getItem('historicoCauciones');
-    if (saved) {
-      const data = JSON.parse(saved);
-      const hoy = new Date().toDateString();
-      // Limpiar si es un día diferente
-      if (data.fecha === hoy) {
-        return data.datos;
+  const [historico, setHistorico] = useState([]);
+
+  // Cargar histórico de backend al montar
+  useEffect(() => {
+    const fetchHistorico = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/historico?dia=${encodeURIComponent(new Date().toISOString())}`);
+        if (response.ok) {
+          const data = await response.json();
+          setHistorico(data);
+        }
+      } catch (e) {
+        console.error('No se pudo cargar el histórico del backend', e);
       }
-    }
-    return [];
-  });
-  const [ultimaAlerta, setUltimaAlerta] = useState(null);
-  const [estadoAnterior, setEstadoAnterior] = useState('dentro'); // 'dentro', 'fuera-alta', 'fuera-baja'
-  const [permisoNotificaciones, setPermisoNotificaciones] = useState(
-    Notification.permission
-  );
+    };
+    fetchHistorico();
+  }, []);
 
   // Sincronizar umbrales con el backend al cargar
   useEffect(() => {
@@ -52,125 +45,25 @@ function App() {
           console.log(`⚙️ Umbrales cargados desde backend: min=${config.umbralMin}%, max=${config.umbralMax}%`);
         }
       } catch (error) {
-        console.log('Usando umbrales locales (backend no disponible)');
+        console.log('Usando umbrales por defecto (backend no disponible)');
       }
     };
-    
     cargarConfiguracion();
   }, []);
 
-  // Solicitar permiso para notificaciones
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        setPermisoNotificaciones(permission);
-      });
-    }
-  }, []);
-
-  // Función para enviar notificación
-  const enviarNotificacion = async (tasaActual, tipo) => {
-    // Evitar enviar la misma alerta múltiples veces (cooldown de 10 minutos)
-    const ahora = Date.now();
-    if (ultimaAlerta && (ahora - ultimaAlerta) < 10 * 60 * 1000) {
-      console.log('Alerta reciente, no se envía duplicado');
-      return;
-    }
-    
-    // Establecer el cooldown ANTES de enviar (previene duplicados)
-    setUltimaAlerta(ahora);
-    
-    // Notificación web
-    if (permisoNotificaciones === 'granted') {
-      const mensajes = {
-        alta: `⬆️ La tasa subió a ${tasaActual}% (máximo: ${umbralMax}%)`,
-        baja: `⬇️ La tasa bajó a ${tasaActual}% (mínimo: ${umbralMin}%)`,
-      };
-      
-      new Notification('🔔 Alerta de Caución', {
-        body: mensajes[tipo] || `La tasa está en ${tasaActual}%`,
-        icon: tipo === 'alta' ? '📈' : '📉',
-        requireInteraction: true
-      });
-    }
-    
-    // Notificación Telegram (via backend)
-    try {
-      await fetch(`${API_BASE_URL}/api/telegram/alerta`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          tasa: tasaActual, 
-          tipo, 
-          umbralMin, 
-          umbralMax 
-        })
-      });
-    } catch (error) {
-      console.log('Telegram no disponible o no configurado');
-    }
-  };
-
-  // Función para obtener la cotización
+  // Actualizar tasa manualmente
   const obtenerCotizacion = async () => {
     try {
       setLoading(true);
       setError(null);
-      
       const response = await fetch(API_URL);
       if (!response.ok) {
         throw new Error('Error al obtener datos del servidor');
       }
-      
       const data = await response.json();
       setTasa(data.tasa);
       const fechaActual = new Date(data.fecha);
       setUltimaActualizacion(fechaActual);
-      setEsSimulado(data.simulado || false);
-      
-      // Guardar en histórico si está dentro del horario de mercado (11:00 - 17:30)
-      const hora = fechaActual.getHours();
-      const minutos = fechaActual.getMinutes();
-      const enHorarioMercado = (hora === 11 && minutos >= 0) || 
-                               (hora > 11 && hora < 17) || 
-                               (hora === 17 && minutos <= 30);
-      
-      if (enHorarioMercado) {
-        const nuevoRegistro = {
-          hora: fechaActual.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-          tasa: data.tasa,
-          timestamp: fechaActual.getTime()
-        };
-        
-        setHistorico(prev => {
-          // Evitar duplicados del mismo minuto
-          const sinDuplicados = prev.filter(item => 
-            Math.abs(item.timestamp - nuevoRegistro.timestamp) > 60000
-          );
-          return [...sinDuplicados, nuevoRegistro].sort((a, b) => a.timestamp - b.timestamp);
-        });
-      }
-      
-      // Verificar si cruzó un umbral (solo al cruzar, no mientras permanece fuera)
-      let estadoActual = 'dentro';
-      
-      if (data.tasa >= umbralMax) {
-        estadoActual = 'fuera-alta';
-        // Solo enviar alerta si venía de 'dentro' o 'fuera-baja' (cruzó el umbral superior)
-        if (estadoAnterior === 'dentro' || estadoAnterior === 'fuera-baja') {
-          enviarNotificacion(data.tasa, 'alta');
-        }
-      } else if (data.tasa <= umbralMin) {
-        estadoActual = 'fuera-baja';
-        // Solo enviar alerta si venía de 'dentro' o 'fuera-alta' (cruzó el umbral inferior)
-        if (estadoAnterior === 'dentro' || estadoAnterior === 'fuera-alta') {
-          enviarNotificacion(data.tasa, 'baja');
-        }
-      }
-      
-      // Actualizar el estado anterior
-      setEstadoAnterior(estadoActual);
-      
     } catch (err) {
       console.error('Error:', err);
       setError(err.message);
@@ -184,74 +77,26 @@ function App() {
     obtenerCotizacion();
   }, []);
 
-  // Guardar umbrales en localStorage cuando cambien
-  useEffect(() => {
-    localStorage.setItem('umbralMin', umbralMin.toString());
-    localStorage.setItem('umbralMax', umbralMax.toString());
-  }, [umbralMin, umbralMax]);
-
-  // Guardar histórico en localStorage
-  useEffect(() => {
-    if (historico.length > 0) {
-      const dataToSave = {
-        fecha: new Date().toDateString(),
-        datos: historico
-      };
-      localStorage.setItem('historicoCauciones', JSON.stringify(dataToSave));
-    }
-  }, [historico]);
-
-  // Configurar consulta periódica (solo en horario de mercado: 11:00 - 17:30)
-  useEffect(() => {
-    const verificarYActualizar = () => {
-      const ahora = new Date();
-      const hora = ahora.getHours();
-      const minutos = ahora.getMinutes();
-      const enHorarioMercado = (hora === 11 && minutos >= 0) || 
-                               (hora > 11 && hora < 17) || 
-                               (hora === 17 && minutos <= 30);
-      
-      if (enHorarioMercado) {
-        obtenerCotizacion();
-      } else {
-        console.log('Fuera del horario de mercado (11:00-17:30), actualización omitida');
-      }
-    };
-    
-    const intervalo = setInterval(verificarYActualizar, INTERVALO_CONSULTA);
-    return () => clearInterval(intervalo);
-  }, [umbralMin, umbralMax]); // Reiniciar si cambian los umbrales
-
-  const solicitarPermiso = async () => {
-    const permission = await Notification.requestPermission();
-    setPermisoNotificaciones(permission);
-  };
+  const handleHidden = () => {
+    SetInfo(prevState => !prevState)
+  }
 
   return (
-    <div className="app">
-      <header>
-        <h1>📊 Monitor de Cauciones</h1>
-        <p className="subtitle">Portfolio Personal - Caución a 1 día</p>
+    <div className="max-w-[800px] my-0 mx-auto p-8">
+      <header className='text-center mb-8 pb-4 border-b-2 border-blue-500'>
+        <h1 className='text-5xl font-bold m-0 text-blue-500'>📊 Monitor de Cauciones</h1>
+        <p className="text-gray-400 mt-4"> Caución a 1 día</p>
       </header>
 
       <main>
-        {/* Configuración de notificaciones */}
-        {permisoNotificaciones !== 'granted' && (
-          <div className="alerta alerta-info">
-            <p>⚠️ Las notificaciones están deshabilitadas</p>
-            <button onClick={solicitarPermiso} className="btn-secundario">
-              Habilitar Notificaciones
-            </button>
-          </div>
-        )}
-
         {/* Configuración de umbrales */}
-        <div className="card config-umbral">
+        <div className="bg-blue-800/60 border border-gray-600 rounded-lg p-6 mb-6 shadow-lg text-center">
           <h3>🎯 Umbrales de Alerta</h3>
-          <div className="umbrales-container">
+          <div className="flex gap-8 justify-center flex-wrap mt-5">
             <label htmlFor="umbral-min">
               📉 Mínimo:
               <input
+                className='bg-white text-right mx-3 rounded'
                 id="umbral-min"
                 type="number"
                 value={umbralMin}
@@ -272,6 +117,7 @@ function App() {
                 step="0.5"
                 min="0"
                 max="100"
+                className='bg-white text-right mx-3 rounded'
               />
               <span className="unidad">%</span>
             </label>
@@ -279,31 +125,26 @@ function App() {
         </div>
 
         {/* Mostrar la tasa actual */}
-        <div className="card tasa-principal">
+        <div className="bg-blue-800/60 rounded border border-blue-500 shadow-md flex flex-col items-center py-4">
           {loading && !tasa ? (
-            <div className="loading">Cargando...</div>
+            <div className="text-black font-bold">Cargando...</div>
           ) : error ? (
-            <div className="error">
+            <div className="text-center">
               <p>❌ Error: {error}</p>
-              <button onClick={obtenerCotizacion} className="btn-secundario">
+              <button  onClick={obtenerCotizacion} className="bg-red-400 text-white rounded-lg border border-white py-1 px-3 mt-4 hover:text-red-700 hover:bg-white transition-all duration-300 cursor-pointer">
                 Reintentar
               </button>
             </div>
           ) : tasa !== null ? (
             <>
               <div className={`tasa ${
-                tasa >= umbralMax ? 'alerta-alta' : 
-                tasa <= umbralMin ? 'alerta-baja' : ''
+                tasa >= umbralMax ? 'text-red-600' : 
+                tasa <= umbralMin ? 'text-green-300' : ''
               }`}>
                 <span className="valor">{tasa.toFixed(2)}</span>
                 <span className="porcentaje">%</span>
               </div>
               <div className="info">
-                {esSimulado && (
-                  <p className="alerta-simulado">
-                    ⚠️ Datos simulados (demo)
-                  </p>
-                )}
                 <p className="plazo">Caución a 1 día</p>
                 {ultimaActualizacion && (
                   <p className="timestamp">
@@ -329,20 +170,22 @@ function App() {
         </div>
 
         {/* Información adicional */}
-        <div className="card info-adicional">
-          <h3>ℹ️ Información</h3>
-          <ul>
-            <li>La cotización se actualiza automáticamente cada 5 minutos</li>
-            <li>Recibirás notificaciones cuando la tasa esté fuera del rango configurado</li>
-            <li>Los umbrales se guardan automáticamente</li>
+        <div className="bg-blue-800/70 mt-5 rounded-lg shadow-lg px-6 py-4">
+          <h3 onClick={handleHidden} className='w-full'>ℹ️ Información </h3>
+          <div className={`${info ? "opacity-100 h-[100%]" : "opacity-0 h-0"} transition-all duration-300`} >
+          <ul className='flex flex-col gap-4 mt-4'>
+            <li>La cotización se actualiza manualmente</li>
+            <li>Recibirás notificaciones cuando la tasa esté fuera del rango configurado (vía backend)</li>
+            <li>Los umbrales se guardan automáticamente en el backend</li>
             <li>Los datos se obtienen en tiempo real de Portfolio Personal</li>
           </ul>
+          </div>
         </div>
 
         {/* Gráfico de evolución diaria */}
         {historico.length > 0 && (
-          <div className="card grafico-container">
-            <h3>📊 Evolución del Día (11:00 - 17:30)</h3>
+          <div className="bg-blue-800/60 rounded-lg shadow-lg">
+            <h3 className='text-blue-400 font-bold'>📊 Evolución del Día (11:00 - 17:30)</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={historico}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -378,7 +221,7 @@ function App() {
                 />
               </LineChart>
             </ResponsiveContainer>
-            <p className="grafico-info">
+            <p className="text-sm text-gray-400 font-light">
               📈 {historico.length} registro{historico.length !== 1 ? 's' : ''} hoy
             </p>
           </div>
