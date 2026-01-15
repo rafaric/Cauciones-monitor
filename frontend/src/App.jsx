@@ -141,28 +141,28 @@ function App() {
                 tasa >= umbralMax ? 'text-red-600' : 
                 tasa <= umbralMin ? 'text-green-300' : ''
               }`}>
-                <span className="valor">{tasa.toFixed(2)}</span>
-                <span className="porcentaje">%</span>
+                <span className="text-5xl text-amber-400">{tasa.toFixed(2)}</span>
+                <span className="text-3xl text-amber-400">%</span>
               </div>
-              <div className="info">
-                <p className="plazo">Caución a 1 día</p>
+              <div className="text-center">
+                <p className="text-gray-400 font-medium text-lg">Caución a 1 día</p>
                 {ultimaActualizacion && (
-                  <p className="timestamp">
+                  <p className="text-gray-300 text-sm">
                     Última actualización: {ultimaActualizacion.toLocaleTimeString('es-AR')}
                   </p>
                 )}
                 {tasa >= umbralMax && (
-                  <p className="alerta-texto alerta-texto-alta">
+                  <p className="text-red-700 font-bold bg-amber-300">
                     🔔 ⬆️ La tasa superó el máximo de {umbralMax}%
                   </p>
                 )}
                 {tasa <= umbralMin && (
-                  <p className="alerta-texto alerta-texto-baja">
+                  <p className="text-green-700 bg-gray-500">
                     🔔 ⬇️ La tasa está por debajo del mínimo de {umbralMin}%
                   </p>
                 )}
               </div>
-              <button onClick={obtenerCotizacion} className="btn-actualizar" disabled={loading}>
+              <button onClick={obtenerCotizacion} className="bg-green-600 text-white rounded-lg shadow border border-blue-300 hover:bg-green-200 hover:text-black transition-all duration-300" disabled={loading}>
                 {loading ? 'Actualizando...' : '🔄 Actualizar'}
               </button>
             </>

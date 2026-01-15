@@ -59,19 +59,7 @@ async function monitorearTasa() {
 
     // Guardar en histórico cada vez que se monitorea
     agregarRegistroHistorico(tasa, Date.now());
-/**
- * Endpoint para obtener el histórico de tasas monitoreadas
- */
-app.get('/api/historico', (req, res) => {
-  // Opcional: filtrar por día
-  const { dia } = req.query;
-  if (dia) {
-    const fechaFiltro = new Date(dia).toDateString();
-    const filtrado = historicoTasas.filter(r => new Date(r.timestamp).toDateString() === fechaFiltro);
-    return res.json(filtrado);
-  }
-  res.json(historicoTasas);
-});
+
 
     if (tasa >= umbralMax) {
       estadoActual = 'fuera-alta';
@@ -161,6 +149,19 @@ app.get('/api/caucion', async (req, res) => {
       mensaje: error.message
     });
   }
+});
+/**
+ * Endpoint para obtener el histórico de tasas monitoreadas
+ */
+app.get('/api/historico', (req, res) => {
+  // Opcional: filtrar por día
+  const { dia } = req.query;
+  if (dia) {
+    const fechaFiltro = new Date(dia).toDateString();
+    const filtrado = historicoTasas.filter(r => new Date(r.timestamp).toDateString() === fechaFiltro);
+    return res.json(filtrado);
+  }
+  res.json(historicoTasas);
 });
 
 /**
