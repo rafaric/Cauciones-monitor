@@ -184,18 +184,18 @@ function App() {
 
         {/* Gráfico de evolución diaria */}
         {historico.length > 0 && (
-          <div className="bg-blue-800/60 rounded-lg shadow-lg">
-            <h3 className='text-blue-400 font-bold'>📊 Evolución del Día (11:00 - 17:30)</h3>
+          <div className="bg-blue-800/60 rounded-lg shadow-lg mt-5 py-5 px-2">
+            <h3 className='text-gray-800 font-bold'>📊 Evolución del Día (11:00 - 17:30)</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={historico}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                 <XAxis 
                   dataKey="hora" 
-                  stroke="#888"
+                  stroke="#444"
                   style={{ fontSize: '0.85rem' }}
                 />
                 <YAxis 
-                  stroke="#888"
+                  stroke="#444"
                   domain={['auto', 'auto']}
                   style={{ fontSize: '0.85rem' }}
                 />
@@ -221,7 +221,7 @@ function App() {
                 />
               </LineChart>
             </ResponsiveContainer>
-            <p className="text-sm text-gray-400 font-light">
+            <p className="text-sm text-gray-800 font-light">
               📈 {historico.length} registro{historico.length !== 1 ? 's' : ''} hoy
             </p>
           </div>

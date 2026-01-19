@@ -69,7 +69,8 @@ function configurarComandos() {
       const data = await getCaucionA1Dia();
       const hora = new Date(data.fecha).toLocaleTimeString('es-AR', { 
         hour: '2-digit', 
-        minute: '2-digit' 
+        minute: '2-digit',
+        timeZone: 'America/Argentina/Buenos_Aires'
       });
       
       const mensaje = `📊 *Caución a 1 día*\n\n` +
@@ -234,7 +235,8 @@ export async function enviarAlerta(tasa, tipo, umbralMin, umbralMax) {
   try {
     const hora = new Date().toLocaleTimeString('es-AR', { 
       hour: '2-digit', 
-      minute: '2-digit' 
+      minute: '2-digit',
+      timeZone: 'America/Argentina/Buenos_Aires'
     });
     
     let mensaje = '';
