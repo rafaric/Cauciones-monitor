@@ -96,7 +96,7 @@ function App() {
             <label htmlFor="umbral-min">
               📉 Mínimo:
               <input
-                className='bg-white text-right mx-3 rounded'
+                className='bg-white text-right mx-3 rounded dark:text-black'
                 id="umbral-min"
                 type="number"
                 value={umbralMin}
@@ -117,7 +117,7 @@ function App() {
                 step="0.5"
                 min="0"
                 max="100"
-                className='bg-white text-right mx-3 rounded'
+                className='bg-white text-right mx-3 rounded dark:text-black'
               />
               <span className="unidad">%</span>
             </label>
@@ -127,7 +127,7 @@ function App() {
         {/* Mostrar la tasa actual */}
         <div className="bg-blue-800/60 rounded shadow-md flex flex-col items-center py-4">
           {loading && !tasa ? (
-            <div className="text-black font-bold">Cargando...</div>
+            <div className="text-black font-bold dark:text-gray-200">Cargando...</div>
           ) : error ? (
             <div className="text-center">
               <p>❌ Error: {error}</p>
@@ -162,7 +162,7 @@ function App() {
                   </p>
                 )}
               </div>
-              <button onClick={obtenerCotizacion} className="bg-green-600 text-white rounded-lg shadow border border-blue-300 hover:bg-green-200 hover:text-black transition-all duration-300 mt-4" disabled={loading}>
+              <button onClick={obtenerCotizacion} className="bg-green-600 text-white rounded-lg shadow border border-blue-300 hover:bg-green-200 hover:text-black transition-all duration-300 mt-4 px-4 py-2" disabled={loading}>
                 {loading ? 'Actualizando...' : '🔄 Actualizar'}
               </button>
             </>

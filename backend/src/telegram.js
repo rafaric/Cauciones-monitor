@@ -73,9 +73,9 @@ function configurarComandos() {
       });
       
       const mensaje = `📊 *Caución a 1 día*\n\n` +
-                      `📈 Tasa: *${data.tasa}%*\n` +
-                      `🕐 Actualizado: ${hora}\n` +
-                      (data.simulado ? `⚠️ _Dato simulado (fuera de horario)_` : `✅ Dato real`);
+              `📈 Tasa: *${data.tasa}%*\n` +
+              `🕐 Actualizado: ${hora}\n` +
+              (data.simulado ? `⚠️ _Dato simulado (fuera de horario)_` : `✅ origen=IOL`);
       
       bot.sendMessage(msg.chat.id, mensaje, { parse_mode: 'Markdown' });
       console.log('📱 Consulta /tasa respondida');

@@ -36,13 +36,13 @@ let ultimaAlerta = null;
 
 function enHorarioMercado() {
   const ahora = new Date();
+  const diaSemana = ahora.getDay(); // 0=domingo, 1=lunes, ..., 5=viernes, 6=sábado
   const hora = ahora.getHours();
   const minutos = ahora.getMinutes();
-  return (
-    (hora === 11 && minutos >= 0) ||
-    (hora > 11 && hora < 17) ||
-    (hora === 17 && minutos <= 30)
-  );
+  // Mercado abierto de lunes a viernes, 10:30 a 17:00
+  const esDiaHabil = diaSemana >= 1 && diaSemana <= 5;
+  const enHorario = (hora > 10 && hora < 17) || (hora === 10 && minutos >= 30) || (hora === 17 && minutos === 0);
+  return esDiaHabil && enHorario;
 }
 
 async function monitorearTasa() {
@@ -52,7 +52,15 @@ async function monitorearTasa() {
     return;
   }
   try {
-    const datos = await getCaucionA1Dia();
+    // Si es viernes, obtener caución a 3 días, si no, a 1 día
+    const ahora = new Date();
+    const diaSemana = ahora.getDay();
+    let datos;
+    if (diaSemana === 5) {
+      datos = await getCaucionA3Dias();
+    } else {
+      datos = await getCaucionA1Dia();
+    }
     const { tasa } = datos;
     const { umbralMin, umbralMax } = getConfig();
     let estadoActual = 'dentro';

@@ -1,3 +1,75 @@
+export async function getCaucionA3Dias() {
+  try {
+    const token = await getIOLToken();
+    const params = {
+      'cotizacionInstrumentoModel.instrumento': 'cauciones',
+      'cotizacionInstrumentoModel.pais': 'argentina'
+    };
+    const { data } = await axios.get(
+      'https://api.invertironline.com/api/v2/Cotizaciones/cauciones/argentina/Todos',
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        params
+      }
+    );
+    // Buscar el plazo T3 (3 días)
+    const caucion = data.titulos.find(t => t.plazo === 'T3');
+    if (!caucion) throw new Error('No se encontró caución a 3 días (T3)');
+    return {
+      plazo: '3 días',
+      tasa: caucion.variacionPorcentual,
+      fecha: caucion.fecha,
+      simulado: false
+    };
+  } catch (error) {
+    throw new Error('Error al obtener caución a 3 días desde IOL: ' + error.message);
+  }
+}
+import axios from 'axios';
+// --- API InvertirOnline ---
+const IOL_API_URL = 'https://api.invertironline.com/api/v2/Cotizaciones/caucion/argentina/Todos';
+const IOL_TOKEN_URL = 'https://api.invertironline.com/token';
+const IOL_USERNAME = process.env.IOL_USERNAME;
+const IOL_PASSWORD = process.env.IOL_PASSWORD;
+
+async function getIOLToken() {
+  const params = new URLSearchParams();
+  params.append('username', IOL_USERNAME);
+  params.append('password', IOL_PASSWORD);
+  params.append('grant_type', 'password');
+  const { data } = await axios.post(IOL_TOKEN_URL, params, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  });
+  return data.access_token;
+}
+
+export async function getCaucionA1Dia() {
+  try {
+    const token = await getIOLToken();
+    const params = {
+      'cotizacionInstrumentoModel.instrumento': 'cauciones',
+      'cotizacionInstrumentoModel.pais': 'argentina'
+    };
+    const { data } = await axios.get(
+      'https://api.invertironline.com/api/v2/Cotizaciones/cauciones/argentina/Todos',
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        params
+      }
+    );
+    // Buscar el plazo T0 (1 día)
+    const caucion = data.titulos.find(t => t.plazo === 'T0');
+    if (!caucion) throw new Error('No se encontró caución a 1 día (T0)');
+    return {
+      plazo: '1 día',
+      tasa: caucion.variacionPorcentual,
+      fecha: caucion.fecha,
+      simulado: false
+    };
+  } catch (error) {
+    throw new Error('Error al obtener caución a 1 día desde IOL: ' + error.message);
+  }
+}
 import puppeteer from 'puppeteer';
 
 const URL_CAUCIONES = 'https://www.portfoliopersonal.com/Cotizaciones/Cauciones';
@@ -37,82 +109,6 @@ async function initBrowser() {
   return browser;
 }
 
-/**
- * Obtiene la cotización de la caución a 1 día desde Portfolio Personal
- * @returns {Promise<{plazo: string, tasa: number}>}
- */
-export async function getCaucionA1Dia() {
-  let page = null;
-  
-  try {
-    console.log('🔍 Consultando cauciones desde:', URL_CAUCIONES);
-    
-    const browser = await initBrowser();
-    page = await browser.newPage();
-    
-    // Configurar el user agent
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    
-    // Ir a la página de cauciones
-    await page.goto(URL_CAUCIONES, {
-      waitUntil: 'networkidle2',
-      timeout: 30000
-    });
-    
-    // Esperar a que cargue la tabla de cauciones
-    await page.waitForSelector('table', { timeout: 10000 });
-    
-    // Extraer los datos de la tabla
-    const cauciones = await page.evaluate(() => {
-      const filas = Array.from(document.querySelectorAll('table tbody tr'));
-      
-      for (const fila of filas) {
-        const texto = fila.textContent || '';
-        const celdas = Array.from(fila.querySelectorAll('td'));
-        
-        // Buscar la fila que contiene "1 DÍA" o "1 día"
-        if (texto.includes('1 DÍA') || texto.includes('1 día') || texto.includes('PESOS - 1 DÍA')) {
-          // Extraer los valores numéricos (tasas)
-          const valores = celdas.map(celda => {
-            const texto = celda.textContent.trim();
-            // Buscar patrones de tasa (ej: 42.50%, 42,50%)
-            const match = texto.match(/(\d+[.,]\d+)\s*%/);
-            return match ? parseFloat(match[1].replace(',', '.')) : null;
-          }).filter(v => v !== null);
-          
-          if (valores.length > 0) {
-            // Retornar la primera tasa encontrada (generalmente es la tasa actual)
-            return valores[0];
-          }
-        }
-      }
-      
-      return null;
-    });
-    
-    await page.close();
-    
-    if (cauciones === null) {
-      throw new Error('No se pudo encontrar la tasa de caución a 1 día en la página');
-    }
-    
-    console.log('✅ Tasa encontrada:', cauciones, '%');
-    
-    return {
-      plazo: '1 día',
-      tasa: cauciones,
-      fecha: new Date().toISOString(),
-      simulado: false
-    };
-
-  } catch (error) {
-    if (page) {
-      await page.close();
-    }
-    console.error('❌ Error al obtener cauciones:', error.message);
-    throw new Error(`Error en el scraping: ${error.message}`);
-  }
-}
 
 /**
  * Cierra el navegador al terminar el proceso
