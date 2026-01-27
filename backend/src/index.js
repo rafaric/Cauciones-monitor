@@ -102,8 +102,25 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware CORS - Permitir tanto desarrollo local como producción
+// Permitir múltiples orígenes desde FRONTEND_URL (separados por coma) y localhost
+let allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins = allowedOrigins.concat(
+    process.env.FRONTEND_URL.split(',').map(o => o.trim())
+  );
+}
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'http://localhost:3000'],
+  origin: function (origin, callback) {
+    // Permitir solicitudes sin origen (como Postman) o si el origen está en la lista
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true
 };
 app.use(cors(corsOptions));
