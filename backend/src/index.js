@@ -126,8 +126,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Inicializar Telegram
-const telegramActivo = initTelegram();
+// Inicializar Telegram solo en producción o Railway
+let telegramActivo = false;
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_STATIC_URL;
+if (isProduction) {
+  telegramActivo = initTelegram();
+  console.log('Telegram iniciado:', telegramActivo);
+} else {
+  console.log('Telegram NO se inicia en entorno local.');
+}
 
 // Cache simple para evitar consultas excesivas
 let cache = {
@@ -145,7 +152,7 @@ app.get('/api/caucion', async (req, res) => {
     // Verificar si hay datos en cache válidos
     const ahora = Date.now();
     if (cache.data && cache.timestamp && (ahora - cache.timestamp) < CACHE_DURATION) {
-      console.log('Devolviendo datos desde cache');
+      console.log('Devolviendo datos desde cache:', cache.data);
       return res.json({
         ...cache.data,
         fromCache: true
@@ -154,16 +161,17 @@ app.get('/api/caucion', async (req, res) => {
 
     // Obtener datos frescos
     console.log('Obteniendo datos frescos...');
-    const datos = await getCaucionA1Dia();
-    
+    // Log de lo que obtiene el backend al consultar la API fuente
+    const datosFuente = await getCaucionA1Dia();
+    console.log('Respuesta cruda del scraper/API:', datosFuente);
     // Actualizar cache
     cache = {
-      data: datos,
+      data: datosFuente,
       timestamp: ahora
     };
 
     res.json({
-      ...datos,
+      ...datosFuente,
       fromCache: false
     });
 
@@ -184,8 +192,10 @@ app.get('/api/historico', (req, res) => {
   if (dia) {
     const fechaFiltro = new Date(dia).toDateString();
     const filtrado = historicoTasas.filter(r => new Date(r.timestamp).toDateString() === fechaFiltro);
+    console.log('Histórico filtrado por día', dia, ':', filtrado);
     return res.json(filtrado);
   }
+  console.log('Histórico completo:', historicoTasas);
   res.json(historicoTasas);
 });
 
@@ -254,6 +264,7 @@ app.post('/api/telegram/alerta', async (req, res) => {
 app.get('/api/config', (req, res) => {
   try {
     const config = getConfig();
+    console.log('Configuración enviada:', config);
     res.json(config);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener configuración' });

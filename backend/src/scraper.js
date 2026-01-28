@@ -12,6 +12,7 @@ export async function getCaucionA3Dias() {
         params
       }
     );
+    console.log('[IOL] Respuesta cruda caución 3 días:', JSON.stringify(data));
     // Buscar el plazo T3 (3 días)
     const caucion = data.titulos.find(t => t.plazo === 'T3');
     if (!caucion) throw new Error('No se encontró caución a 3 días (T3)');
@@ -57,6 +58,7 @@ export async function getCaucionA1Dia() {
         params
       }
     );
+    console.log('[IOL] Respuesta cruda caución 1 día:', JSON.stringify(data));
     // Buscar el plazo T0 (1 día)
     const caucion = data.titulos.find(t => t.plazo === 'T0');
     if (!caucion) throw new Error('No se encontró caución a 1 día (T0)');
