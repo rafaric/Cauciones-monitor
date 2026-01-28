@@ -67,11 +67,8 @@ function configurarComandos() {
       bot.sendMessage(msg.chat.id, '⏳ Consultando cotización...');
       
       const data = await getCaucionA1Dia();
-      const hora = new Date(data.fecha).toLocaleTimeString('es-AR', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Argentina/Buenos_Aires'
-      });
+        const fecha = new Date(data.fecha);
+        const hora = fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
       
       const mensaje = `📊 *Caución a 1 día*\n\n` +
               `📈 Tasa: *${data.tasa}%*\n` +

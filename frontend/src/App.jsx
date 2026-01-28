@@ -148,7 +148,7 @@ function App() {
                 <p className="text-gray-400 font-medium text-lg">Caución a 1 día</p>
                 {ultimaActualizacion && (
                   <p className="text-gray-300 text-sm">
-                    Última actualización: {ultimaActualizacion.toLocaleTimeString('es-AR')}
+                    Última actualización: {ultimaActualizacion.toLocaleTimeString('es-AR')} pm
                   </p>
                 )}
                 {tasa >= umbralMax && (
@@ -157,7 +157,7 @@ function App() {
                   </p>
                 )}
                 {tasa <= umbralMin && (
-                  <p className="text-green-700 bg-gray-500">
+                  <p className="text-green-700 bg-gray-200 p-2 rounded mt-4">
                     🔔 ⬇️ La tasa está por debajo del mínimo de {umbralMin}%
                   </p>
                 )}
@@ -175,9 +175,9 @@ function App() {
           <div className={`${info ? "opacity-100 h-[100%]" : "opacity-0 h-0"} transition-all duration-300`} >
           <ul className='flex flex-col gap-4 mt-4'>
             <li>La cotización se actualiza manualmente</li>
-            <li>Recibirás notificaciones cuando la tasa esté fuera del rango configurado (vía backend)</li>
-            <li>Los umbrales se guardan automáticamente en el backend</li>
-            <li>Los datos se obtienen en tiempo real de Portfolio Personal</li>
+            <li>Recibirás notificaciones cuando la tasa esté fuera del rango configurado</li>
+            <li>Los umbrales se guardan automáticamente.</li>
+            <li>Los datos se obtienen en tiempo real desde IOL</li>
           </ul>
           </div>
         </div>
