@@ -82,7 +82,7 @@ function App() {
   }
 
   return (
-    <div className="max-w-[800px] my-0 mx-auto p-8">
+    <div className="max-w-200 my-0 mx-auto p-8">
       <header className='text-center mb-8 pb-4 border-b-2 border-blue-500'>
         <h1 className='text-5xl font-bold m-0 text-blue-500 dark:text-blue-100'>📊 Monitor de Cauciones</h1>
         <p className="text-gray-400 mt-4"> Caución a 1 día</p>
@@ -172,7 +172,7 @@ function App() {
         {/* Información adicional */}
         <div className="bg-blue-800/70 mt-5 rounded-lg shadow-lg px-6 py-4 dark:text-gray-300">
           <h3 onClick={handleHidden} className='w-full'>ℹ️ Información </h3>
-          <div className={`${info ? "opacity-100 h-[100%]" : "opacity-0 h-0"} transition-all duration-300`} >
+          <div className={`${info ? "opacity-100 h-full" : "opacity-0 h-0"} transition-all duration-300`} >
           <ul className='flex flex-col gap-4 mt-4'>
             <li>La cotización se actualiza manualmente</li>
             <li>Recibirás notificaciones cuando la tasa esté fuera del rango configurado</li>
