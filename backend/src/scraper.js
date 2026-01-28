@@ -18,7 +18,7 @@ export async function getCaucionA3Dias() {
     if (!caucion) throw new Error('No se encontró caución a 3 días (T3)');
     return {
       plazo: '3 días',
-      tasa: caucion.variacionPorcentual,
+      tasa: caucion.ultimoPrecio,
       fecha: caucion.fecha,
       simulado: false
     };
@@ -64,7 +64,7 @@ export async function getCaucionA1Dia() {
     if (!caucion) throw new Error('No se encontró caución a 1 día (T0)');
     return {
       plazo: '1 día',
-      tasa: caucion.variacionPorcentual,
+      tasa: caucion.ultimoPrecio,
       fecha: caucion.fecha,
       simulado: false
     };
