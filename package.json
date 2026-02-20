@@ -10,5 +10,8 @@
   },
   "keywords": ["cauciones", "scraping", "react", "express"],
   "author": "Rafael Rico",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "twilio": "^5.12.2"
+  }
 }

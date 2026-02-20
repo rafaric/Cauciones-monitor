@@ -31,7 +31,7 @@ function agregarRegistroHistorico(tasa, fecha) {
   guardarHistorico();
 }
 // --- Monitoreo autónomo de tasa y alertas ---
-let estadoAnterior = 'dentro'; // 'dentro', 'fuera-alta', 'fuera-baja'
+let tasaAnterior = null; // Tasa de la consulta anterior
 let ultimaAlerta = null;
 
 function enHorarioMercado() {
@@ -48,48 +48,37 @@ function enHorarioMercado() {
 async function monitorearTasa() {
   if (!enHorarioMercado()) {
     // Resetear estado si salimos del horario de mercado
-    estadoAnterior = 'dentro';
+    tasaAnterior = null;
     return;
   }
   try {
-    // Si es viernes, obtener caución a 3 días, si no, a 1 día
-    const ahora = new Date();
-    const diaSemana = ahora.getDay();
-    let datos;
-    if (diaSemana === 5) {
-      datos = await getCaucionA3Dias();
-    } else {
-      datos = await getCaucionA1Dia();
-    }
+    // La función getCaucionA1Dia ya maneja la lógica de viernes=3 días
+    const datos = await getCaucionA1Dia();
     const { tasa } = datos;
-    const { umbralMin, umbralMax } = getConfig();
-    let estadoActual = 'dentro';
+    const { umbralMin } = getConfig();
 
     // Guardar en histórico cada vez que se monitorea
     agregarRegistroHistorico(tasa, Date.now());
 
-
-    if (tasa >= umbralMax) {
-      estadoActual = 'fuera-alta';
-      if (estadoAnterior === 'dentro' || estadoAnterior === 'fuera-baja') {
-        await enviarAlerta(tasa, 'alta', umbralMin, umbralMax);
-        ultimaAlerta = Date.now();
-      }
-    } else if (tasa <= umbralMin) {
-      estadoActual = 'fuera-baja';
-      if (estadoAnterior === 'dentro' || estadoAnterior === 'fuera-alta') {
-        await enviarAlerta(tasa, 'baja', umbralMin, umbralMax);
-        ultimaAlerta = Date.now();
-      }
+    // Solo alertar si:
+    // 1. Hay una tasa anterior registrada
+    // 2. La tasa anterior estaba por debajo del umbral
+    // 3. La tasa actual supera el umbral
+    if (tasaAnterior !== null && tasaAnterior < umbralMin && tasa >= umbralMin) {
+      await enviarAlerta(tasa, umbralMin);
+      ultimaAlerta = Date.now();
+      console.log(`🚨 Alerta enviada: tasa pasó de ${tasaAnterior}% a ${tasa}% (umbral: ${umbralMin}%)`);
     }
-    estadoAnterior = estadoActual;
+    
+    // Actualizar tasa anterior para la próxima iteración
+    tasaAnterior = tasa;
   } catch (err) {
     console.error('Error en monitoreo automático:', err.message);
   }
 }
 
-// Ejecutar monitoreo cada 5 minutos
-setInterval(monitorearTasa, 5 * 60 * 1000);
+// Ejecutar monitoreo cada 10 minutos
+setInterval(monitorearTasa, 10 * 60 * 1000);
 // Ejecutar al iniciar
 monitorearTasa();
 import 'dotenv/config';
@@ -244,17 +233,17 @@ app.post('/api/telegram/test', async (req, res) => {
 app.post('/api/telegram/alerta', async (req, res) => {
   if (!telegramActivo) {
     return res.status(400).json({ 
-      error: 'Telegram no configurado'
+      error: 'Notificaciones no configuradas'
     });
   }
   
-  const { tasa, tipo, umbralMin, umbralMax } = req.body;
+  const { tasa, umbralMin } = req.body;
   
-  if (!tasa || !tipo) {
-    return res.status(400).json({ error: 'Faltan parámetros: tasa y tipo son requeridos' });
+  if (!tasa) {
+    return res.status(400).json({ error: 'Falta parámetro: tasa es requerido' });
   }
   
-  await enviarAlerta(tasa, tipo, umbralMin || 35, umbralMax || 50);
+  await enviarAlerta(tasa, umbralMin || 32);
   res.json({ mensaje: 'Alerta enviada' });
 });
 

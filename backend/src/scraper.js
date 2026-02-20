@@ -1,134 +1,57 @@
-export async function getCaucionA3Dias() {
-  try {
-    const token = await getIOLToken();
-    const params = {
-      'cotizacionInstrumentoModel.instrumento': 'cauciones',
-      'cotizacionInstrumentoModel.pais': 'argentina'
-    };
-    const { data } = await axios.get(
-      'https://api.invertironline.com/api/v2/Cotizaciones/cauciones/argentina/Todos',
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        params
-      }
-    );
-    console.log('[IOL] Respuesta cruda caución 3 días:', JSON.stringify(data));
-    // Buscar el plazo T3 (3 días)
-    const caucion = data.titulos.find(t => t.plazo === 'T3');
-    if (!caucion) throw new Error('No se encontró caución a 3 días (T3)');
-    return {
-      plazo: '3 días',
-      tasa: caucion.ultimoPrecio,
-      fecha: caucion.fecha,
-      simulado: false
-    };
-  } catch (error) {
-    throw new Error('Error al obtener caución a 3 días desde IOL: ' + error.message);
-  }
-}
 import axios from 'axios';
+
 // --- API InvertirOnline ---
-const IOL_API_URL = 'https://api.invertironline.com/api/v2/Cotizaciones/caucion/argentina/Todos';
-const IOL_TOKEN_URL = 'https://api.invertironline.com/token';
-const IOL_USERNAME = process.env.IOL_USERNAME;
-const IOL_PASSWORD = process.env.IOL_PASSWORD;
+const IOL_PUNTAS_URL = 'https://iol.invertironline.com/Mercado/GetCaucionPuntas';
 
-async function getIOLToken() {
-  const params = new URLSearchParams();
-  params.append('username', IOL_USERNAME);
-  params.append('password', IOL_PASSWORD);
-  params.append('grant_type', 'password');
-  const { data } = await axios.post(IOL_TOKEN_URL, params, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-  });
-  return data.access_token;
-}
-
-export async function getCaucionA1Dia() {
+/**
+ * Obtiene los datos de caución utilizando la API de puntas de IOL
+ * @param {number} plazoDias - Plazo en días (1 o 3)
+ * @returns {Promise<{plazo: string, tasa: number, fecha: Date}>}
+ */
+async function getCaucionPorPlazo(plazoDias = 1) {
   try {
-    const token = await getIOLToken();
-    const params = {
-      'cotizacionInstrumentoModel.instrumento': 'cauciones',
-      'cotizacionInstrumentoModel.pais': 'argentina'
-    };
-    const { data } = await axios.get(
-      'https://api.invertironline.com/api/v2/Cotizaciones/cauciones/argentina/Todos',
+    const response = await axios.post(IOL_PUNTAS_URL, 
+      `moneda=PESOS&plazo=${plazoDias}&idTipoTransaccion=14`,
       {
-        headers: { Authorization: `Bearer ${token}` },
-        params
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
       }
     );
-    console.log('[IOL] Respuesta cruda caución 1 día:', JSON.stringify(data));
-    // Buscar el plazo T0 (1 día)
-    const caucion = data.titulos.find(t => t.plazo === 'T0');
-    if (!caucion) throw new Error('No se encontró caución a 1 día (T0)');
+
+    const data = response.data;
+    
+    if (!data.success) {
+      throw new Error('La API de IOL retornó success=false');
+    }
+
+    // Buscar la tasa colocadora más alta
+    const tasas = data.listaPuntas.map(p => parseFloat(p.tasaCompra));
+    const tasaMax = Math.max(...tasas);
+
     return {
-      plazo: '1 día',
-      tasa: caucion.ultimoPrecio,
-      fecha: caucion.fecha,
+      plazo: `${plazoDias} día${plazoDias > 1 ? 's' : ''}`,
+      tasa: tasaMax,
+      fecha: new Date(),
       simulado: false
     };
   } catch (error) {
-    throw new Error('Error al obtener caución a 1 día desde IOL: ' + error.message);
+    throw new Error(`Error al obtener caución a ${plazoDias} día(s): ${error.message}`);
   }
 }
-import puppeteer from 'puppeteer';
-
-const URL_CAUCIONES = 'https://www.portfoliopersonal.com/Cotizaciones/Cauciones';
-
-let browser = null;
 
 /**
- * Inicializa el navegador de Puppeteer
+ * Obtiene la caución según el día de la semana
+ * - Viernes: 3 días
+ * - Resto: 1 día
  */
-async function initBrowser() {
-  if (!browser || !browser.connected) {
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (e) {
-        // Ignorar errores al cerrar
-      }
-    }
-    
-    const launchOptions = {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu'
-      ]
-    };
-    
-    // Usar Chromium del sistema si está disponible (Railway/Docker)
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    }
-    
-    browser = await puppeteer.launch(launchOptions);
-  }
-  return browser;
+export async function getCaucionA1Dia() {
+  const ahora = new Date();
+  const diaSemana = ahora.getDay(); // 0=domingo, 5=viernes
+  
+  // Si es viernes, consultar a 3 días, si no a 1 día
+  const plazoDias = (diaSemana === 5) ? 3 : 1;
+  
+  return await getCaucionPorPlazo(plazoDias);
 }
-
-
-/**
- * Cierra el navegador al terminar el proceso
- */
-export async function closeBrowser() {
-  if (browser) {
-    await browser.close();
-    browser = null;
-  }
-}
-
-// Cerrar el navegador cuando el proceso termine
-process.on('SIGINT', async () => {
-  await closeBrowser();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await closeBrowser();
-  process.exit(0);
-});

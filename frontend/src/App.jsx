@@ -4,14 +4,13 @@ import "./App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cauciones-monitor-production.up.railway.app';
 const API_URL = `${API_BASE_URL}/api/caucion`;
-const UMBRAL_MIN_DEFAULT = 35; // Tasa mínima por defecto
-const UMBRAL_MAX_DEFAULT = 50; // Tasa máxima por defecto
+const UMBRAL_MIN_DEFAULT = 32; // Tasa mínima por defecto
 
 function App() {
   const [info, SetInfo] = useState(false)
   const [tasa, setTasa] = useState(null);
+  const [plazo, setPlazo] = useState('1 día'); // Plazo dinámico
   const [umbralMin, setUmbralMin] = useState(UMBRAL_MIN_DEFAULT);
-  const [umbralMax, setUmbralMax] = useState(UMBRAL_MAX_DEFAULT);
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +32,7 @@ function App() {
     fetchHistorico();
   }, []);
 
-  // Sincronizar umbrales con el backend al cargar
+  // Sincronizar umbral con el backend al cargar
   useEffect(() => {
     const cargarConfiguracion = async () => {
       try {
@@ -41,11 +40,10 @@ function App() {
         if (response.ok) {
           const config = await response.json();
           setUmbralMin(config.umbralMin);
-          setUmbralMax(config.umbralMax);
-          console.log(`⚙️ Umbrales cargados desde backend: min=${config.umbralMin}%, max=${config.umbralMax}%`);
+          console.log(`⚙️ Umbral cargado desde backend: min=${config.umbralMin}%`);
         }
       } catch (error) {
-        console.log('Usando umbrales por defecto (backend no disponible)');
+        console.log('Usando umbral por defecto (backend no disponible)');
       }
     };
     cargarConfiguracion();
@@ -62,6 +60,7 @@ function App() {
       }
       const data = await response.json();
       setTasa(data.tasa);
+      setPlazo(data.plazo || '1 día'); // Guardar el plazo desde el backend
       const fechaActual = new Date(data.fecha);
       setUltimaActualizacion(fechaActual);
     } catch (err) {
@@ -85,16 +84,16 @@ function App() {
     <div className="max-w-200 my-0 mx-auto p-8">
       <header className='text-center mb-8 pb-4 border-b-2 border-blue-500'>
         <h1 className='text-5xl font-bold m-0 text-blue-500 dark:text-blue-100'>📊 Monitor de Cauciones</h1>
-        <p className="text-gray-400 mt-4"> Caución a 1 día</p>
+        <p className="text-gray-400 mt-4">Caución a {plazo}</p>
       </header>
 
       <main>
         {/* Configuración de umbrales */}
         <div className="bg-blue-800/60 border border-gray-600 rounded-lg p-6 mb-6 shadow-lg text-center dark:text-gray-200">
-          <h3>🎯 Umbrales de Alerta</h3>
+          <h3>🎯 Umbral de Alerta</h3>
           <div className="flex gap-8 justify-center flex-wrap mt-5 dark:text-white">
             <label htmlFor="umbral-min">
-              📉 Mínimo:
+              📈 Mínimo:
               <input
                 className='bg-white text-right mx-3 rounded dark:text-black'
                 id="umbral-min"
@@ -107,21 +106,10 @@ function App() {
               />
               <span className="unidad">%</span>
             </label>
-            <label htmlFor="umbral-max">
-              📈 Máximo:
-              <input
-                id="umbral-max"
-                type="number"
-                value={umbralMax}
-                onChange={(e) => setUmbralMax(parseFloat(e.target.value) || 0)}
-                step="0.5"
-                min="0"
-                max="100"
-                className='bg-white text-right mx-3 rounded dark:text-black'
-              />
-              <span className="unidad">%</span>
-            </label>
           </div>
+          <p className="text-sm text-gray-300 mt-3">
+            ℹ️ Se enviará alerta cuando la tasa supere este valor
+          </p>
         </div>
 
         {/* Mostrar la tasa actual */}
@@ -138,27 +126,21 @@ function App() {
           ) : tasa !== null ? (
             <>
               <div className={`tasa ${
-                tasa >= umbralMax ? 'text-red-600' : 
-                tasa <= umbralMin ? 'text-green-300' : ''
+                tasa >= umbralMin ? 'text-red-600' : 'text-green-300'
               }`}>
                 <span className="text-5xl text-amber-400 mr-2">{tasa.toFixed(2)}</span>
                 <span className="text-3xl text-amber-400">%</span>
               </div>
               <div className="text-center">
-                <p className="text-gray-400 font-medium text-lg">Caución a 1 día</p>
+                <p className="text-gray-400 font-medium text-lg">Caución a {plazo}</p>
                 {ultimaActualizacion && (
                   <p className="text-gray-300 text-sm">
                     Última actualización: {ultimaActualizacion.toLocaleTimeString('es-AR')} pm
                   </p>
                 )}
-                {tasa >= umbralMax && (
-                  <p className="text-red-700 font-bold bg-amber-300">
-                    🔔 ⬆️ La tasa superó el máximo de {umbralMax}%
-                  </p>
-                )}
-                {tasa <= umbralMin && (
-                  <p className="text-green-700 bg-gray-200 p-2 rounded mt-4">
-                    🔔 ⬇️ La tasa está por debajo del mínimo de {umbralMin}%
+                {tasa >= umbralMin && (
+                  <p className="text-red-700 font-bold bg-amber-300 p-2 rounded mt-4">
+                    🔔 ⬆️ La tasa superó el umbral de {umbralMin}%
                   </p>
                 )}
               </div>
@@ -175,9 +157,10 @@ function App() {
           <div className={`${info ? "opacity-100 h-full" : "opacity-0 h-0"} transition-all duration-300`} >
           <ul className='flex flex-col gap-4 mt-4'>
             <li>La cotización se actualiza manualmente</li>
-            <li>Recibirás notificaciones cuando la tasa esté fuera del rango configurado</li>
-            <li>Los umbrales se guardan automáticamente.</li>
+            <li>Recibirás notificaciones cuando la tasa supere el umbral configurado</li>
+            <li>El umbral se guarda automáticamente.</li>
             <li>Los datos se obtienen en tiempo real desde IOL</li>
+            <li>Los viernes se consulta caución a 3 días, el resto a 1 día</li>
           </ul>
           </div>
         </div>
@@ -208,7 +191,6 @@ function App() {
                   labelStyle={{ color: '#fff' }}
                 />
                 <Legend />
-                <ReferenceLine y={umbralMax} stroke="#ff6b6b" strokeDasharray="3 3" label="Máx" />
                 <ReferenceLine y={umbralMin} stroke="#ffa500" strokeDasharray="3 3" label="Mín" />
                 <Line 
                   type="monotone" 

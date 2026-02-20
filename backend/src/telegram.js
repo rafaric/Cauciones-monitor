@@ -1,4 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api';
+import twilio from 'twilio';
 import { getCaucionA1Dia } from './scraper.js';
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +11,37 @@ const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
 
 let bot = null;
 let chatId = null;
+let twilioClient = null;
+let twilioConfig = {
+  from: null,
+  to: []
+};
+
+/**
+ * Inicializa Twilio para WhatsApp
+ */
+function initTwilio() {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM;
+  const whatsappTo = process.env.TWILIO_WHATSAPP_TO;
+
+  if (!accountSid || !authToken || !whatsappFrom || !whatsappTo) {
+    console.log('⚠️  Twilio/WhatsApp no configurado (variables TWILIO_* no encontradas)');
+    return false;
+  }
+
+  try {
+    twilioClient = twilio(accountSid, authToken);
+    twilioConfig.from = whatsappFrom;
+    twilioConfig.to = whatsappTo.split(',').map(num => num.trim());
+    console.log('✅ Twilio/WhatsApp inicializado');
+    return true;
+  } catch (error) {
+    console.error('❌ Error al inicializar Twilio:', error.message);
+    return false;
+  }
+}
 
 /**
  * Inicializa el bot de Telegram con comandos interactivos
@@ -24,23 +56,29 @@ export function initTelegram() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   chatId = process.env.TELEGRAM_CHAT_ID;
   
+  let telegramActivo = false;
+  let whatsappActivo = false;
+  
   if (!token || !chatId) {
     console.log('⚠️  Telegram no configurado (variables TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID no encontradas)');
-    return false;
+  } else {
+    try {
+      bot = new TelegramBot(token, { polling: true });
+      console.log('✅ Bot de Telegram inicializado con polling');
+      
+      // Configurar comandos
+      configurarComandos();
+      
+      telegramActivo = true;
+    } catch (error) {
+      console.error('❌ Error al inicializar Telegram:', error.message);
+    }
   }
   
-  try {
-    bot = new TelegramBot(token, { polling: true });
-    console.log('✅ Bot de Telegram inicializado con polling');
-    
-    // Configurar comandos
-    configurarComandos();
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Error al inicializar Telegram:', error.message);
-    return false;
-  }
+  // Inicializar Twilio/WhatsApp
+  whatsappActivo = initTwilio();
+  
+  return telegramActivo || whatsappActivo;
 }
 
 /**
@@ -52,9 +90,8 @@ function configurarComandos() {
     const mensaje = `👋 *Bienvenido al Monitor de Cauciones*\n\n` +
                     `Comandos disponibles:\n` +
                     `/tasa - Consultar la tasa actual\n` +
-                    `/config - Ver umbrales configurados\n` +
+                    `/config - Ver umbral configurado\n` +
                     `/setmin <valor> - Configurar umbral mínimo\n` +
-                    `/setmax <valor> - Configurar umbral máximo\n` +
                     `/status - Estado del sistema\n` +
                     `/help - Mostrar ayuda`;
     
@@ -89,11 +126,10 @@ function configurarComandos() {
     try {
       const config = leerConfig();
       const mensaje = `⚙️ *Configuración Actual*\n\n` +
-                      `📉 Umbral mínimo: *${config.umbralMin}%*\n` +
-                      `📈 Umbral máximo: *${config.umbralMax}%*\n\n` +
+                      `📉 Umbral mínimo: *${config.umbralMin}%*\n\n` +
+                      `ℹ️ Se enviará alerta cuando la tasa supere este valor.\n\n` +
                       `Para cambiar usa:\n` +
-                      `/setmin <valor>\n` +
-                      `/setmax <valor>`;
+                      `/setmin <valor>`;
       
       bot.sendMessage(msg.chat.id, mensaje, { parse_mode: 'Markdown' });
     } catch (error) {
@@ -113,12 +149,6 @@ function configurarComandos() {
       }
       
       const config = leerConfig();
-      
-      if (valor >= config.umbralMax) {
-        bot.sendMessage(msg.chat.id, `❌ El umbral mínimo (${valor}%) debe ser menor al máximo (${config.umbralMax}%)`);
-        return;
-      }
-      
       config.umbralMin = valor;
       guardarConfig(config);
       
@@ -128,35 +158,6 @@ function configurarComandos() {
     } catch (error) {
       bot.sendMessage(msg.chat.id, '❌ Error al guardar la configuración.');
       console.error('Error en comando /setmin:', error.message);
-    }
-  });
-  
-  // Comando /setmax - Configurar umbral máximo
-  bot.onText(/\/setmax (.+)/, (msg, match) => {
-    try {
-      const valor = parseFloat(match[1]);
-      
-      if (isNaN(valor) || valor < 0 || valor > 100) {
-        bot.sendMessage(msg.chat.id, '❌ Valor inválido. Debe ser un número entre 0 y 100.');
-        return;
-      }
-      
-      const config = leerConfig();
-      
-      if (valor <= config.umbralMin) {
-        bot.sendMessage(msg.chat.id, `❌ El umbral máximo (${valor}%) debe ser mayor al mínimo (${config.umbralMin}%)`);
-        return;
-      }
-      
-      config.umbralMax = valor;
-      guardarConfig(config);
-      
-      bot.sendMessage(msg.chat.id, `✅ Umbral máximo actualizado a *${valor}%*`, { parse_mode: 'Markdown' });
-      console.log(`⚙️ Umbral máximo actualizado a ${valor}% vía Telegram`);
-      
-    } catch (error) {
-      bot.sendMessage(msg.chat.id, '❌ Error al guardar la configuración.');
-      console.error('Error en comando /setmax:', error.message);
     }
   });
   
@@ -174,19 +175,18 @@ function configurarComandos() {
   bot.onText(/\/help/, (msg) => {
     const mensaje = `📖 *Ayuda - Monitor de Cauciones*\n\n` +
                     `*Comandos disponibles:*\n` +
-                    `/tasa - Consulta la cotización actual de caución a 1 día\n` +
-                    `/config - Ver umbrales configurados\n` +
-                    `/setmin <valor> - Configurar umbral mínimo (ej: /setmin 35)\n` +
-                    `/setmax <valor> - Configurar umbral máximo (ej: /setmax 50)\n` +
+                    `/tasa - Consulta la cotización actual\n` +
+                    `/config - Ver umbral configurado\n` +
+                    `/setmin <valor> - Configurar umbral mínimo (ej: /setmin 32)\n` +
                     `/status - Verifica el estado del sistema\n` +
                     `/help - Muestra esta ayuda\n\n` +
                     `*Alertas automáticas:*\n` +
-                    `Recibirás notificaciones cuando la tasa cruce los umbrales configurados.`;
+                    `Recibirás notificaciones cuando la tasa supere el umbral configurado.`;
     
     bot.sendMessage(msg.chat.id, mensaje, { parse_mode: 'Markdown' });
   });
   
-  console.log('✅ Comandos del bot configurados: /start, /tasa, /config, /setmin, /setmax, /status, /help');
+  console.log('✅ Comandos del bot configurados: /start, /tasa, /config, /setmin, /status, /help');
 }
 
 /**
@@ -198,7 +198,7 @@ function leerConfig() {
     return JSON.parse(data);
   } catch (error) {
     console.error('Error al leer config.json, usando valores por defecto');
-    return { umbralMin: 35, umbralMax: 50 };
+    return { umbralMin: 32 };
   }
 }
 
@@ -217,44 +217,50 @@ export function getConfig() {
 }
 
 /**
- * Envía una alerta de caución a Telegram
+ * Envía una alerta de caución a Telegram y WhatsApp
  * @param {number} tasa - Tasa actual
- * @param {string} tipo - 'alta' o 'baja'
  * @param {number} umbralMin - Umbral mínimo
- * @param {number} umbralMax - Umbral máximo
  */
-export async function enviarAlerta(tasa, tipo, umbralMin, umbralMax) {
-  if (!bot || !chatId) {
-    console.log('⚠️  Alerta no enviada: Telegram no configurado');
-    return;
+export async function enviarAlerta(tasa, umbralMin) {
+  const hora = new Date().toLocaleTimeString('es-AR', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: 'America/Argentina/Buenos_Aires'
+  });
+  
+  const mensaje = `🔴 *ALERTA: Caución supera el umbral*\n\n` +
+                  `📈 Tasa actual: *${tasa}%*\n` +
+                  `🎯 Umbral mínimo: ${umbralMin}%\n` +
+                  `🕐 Hora: ${hora}`;
+  
+  // Enviar a Telegram
+  if (bot && chatId) {
+    try {
+      await bot.sendMessage(chatId, mensaje, { parse_mode: 'Markdown' });
+      console.log(`📱 Alerta enviada a Telegram`);
+    } catch (error) {
+      console.error('❌ Error al enviar mensaje a Telegram:', error.message);
+    }
   }
   
-  try {
-    const hora = new Date().toLocaleTimeString('es-AR', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      timeZone: 'America/Argentina/Buenos_Aires'
-    });
-    
-    let mensaje = '';
-    
-    if (tipo === 'alta') {
-      mensaje = `🔴 *ALERTA: Caución Alta*\n\n` +
-                `📈 Tasa: *${tasa}%*\n` +
-                `🎯 Umbral máximo: ${umbralMax}%\n` +
-                `🕐 Hora: ${hora}`;
-    } else if (tipo === 'baja') {
-      mensaje = `🟠 *ALERTA: Caución Baja*\n\n` +
-                `📉 Tasa: *${tasa}%*\n` +
-                `🎯 Umbral mínimo: ${umbralMin}%\n` +
-                `🕐 Hora: ${hora}`;
+  // Enviar a WhatsApp
+  if (twilioClient && twilioConfig.from && twilioConfig.to.length > 0) {
+    try {
+      for (const to of twilioConfig.to) {
+        await twilioClient.messages.create({
+          from: twilioConfig.from,
+          to: to,
+          body: `⚡ ALERTA: La tasa de caución superó ${umbralMin}% (actual: ${tasa}%)\n🕐 Hora: ${hora}`
+        });
+        console.log(`📱 Alerta enviada a WhatsApp: ${to}`);
+      }
+    } catch (error) {
+      console.error('❌ Error al enviar mensaje a WhatsApp:', error.message);
     }
-    
-    await bot.sendMessage(chatId, mensaje, { parse_mode: 'Markdown' });
-    console.log(`📱 Alerta enviada a Telegram (${tipo})`);
-    
-  } catch (error) {
-    console.error('❌ Error al enviar mensaje a Telegram:', error.message);
+  }
+  
+  if (!bot && !twilioClient) {
+    console.log('⚠️  Alerta no enviada: ni Telegram ni WhatsApp están configurados');
   }
 }
 
