@@ -2,6 +2,28 @@
 
 Esta guía te ayudará a deployar tu aplicación de monitoreo de cauciones completamente gratis.
 
+## 📝 Resumen Rápido de Configuración
+
+### Railway (Backend) - Variables de Entorno
+```bash
+PORT=3000
+FRONTEND_URL=https://tu-frontend.vercel.app
+TELEGRAM_BOT_TOKEN=tu-token-de-telegram
+TELEGRAM_CHAT_ID=tu-chat-id
+TWILIO_ACCOUNT_SID=tu-account-sid-de-twilio
+TWILIO_AUTH_TOKEN=tu-auth-token-de-twilio
+TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+TWILIO_WHATSAPP_TO=whatsapp:+549XXXXXXXXXX
+UMBRAL_MIN=32
+```
+
+### Vercel (Frontend) - Variables de Entorno
+```bash
+VITE_API_URL=https://tu-proyecto.up.railway.app
+```
+
+---
+
 ## 📋 Requisitos Previos
 
 - Cuenta de [GitHub](https://github.com)
@@ -52,9 +74,26 @@ En el dashboard de Railway:
 
 ```
 PORT=3000
-TELEGRAM_BOT_TOKEN=8543457906:AAGCy0041_ZOxL_WeoGsZQexMeCpyGO6Qx0
-TELEGRAM_CHAT_ID=875428409
+FRONTEND_URL=https://tu-frontend.vercel.app
+
+# Telegram (OPCIONAL)
+TELEGRAM_BOT_TOKEN=tu-token-de-telegram
+TELEGRAM_CHAT_ID=tu-chat-id
+
+# Twilio para WhatsApp (REQUERIDO)
+TWILIO_ACCOUNT_SID=tu-account-sid-de-twilio
+TWILIO_AUTH_TOKEN=tu-auth-token-de-twilio
+TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+TWILIO_WHATSAPP_TO=whatsapp:+549XXXXXXXXXX
+
+# Configuración de alertas
+UMBRAL_MIN=32
 ```
+
+⚠️ **Importante**: 
+- Reemplaza `tu-frontend.vercel.app` con tu URL real de Vercel (la obtendrás en el Paso 3)
+- Puedes agregar más números de WhatsApp separados por comas en `TWILIO_WHATSAPP_TO`
+- El `TWILIO_WHATSAPP_FROM` es el número sandbox de Twilio (no lo cambies a menos que tengas un número propio)
 
 ### 2.3 Configurar Build
 
@@ -117,8 +156,25 @@ FRONTEND_URL=https://tu-frontend.vercel.app
 1. **Abre tu frontend:** `https://tu-frontend.vercel.app`
 2. **Verifica la conexión:** La app debe cargar la cotización
 3. **Prueba Telegram:** Envía `/tasa` a tu bot
+4. **Prueba WhatsApp:** Debes recibir alertas cuando la tasa supere el umbral
 
-## 🎯 Comandos Útiles
+## 📱 Paso 6: Configurar WhatsApp Sandbox (Twilio)
+
+Para que funcione WhatsApp, debes autorizar los números en el sandbox de Twilio:
+
+1. Ve a [Twilio Console - WhatsApp Sandbox](https://www.twilio.com/console/sms/whatsapp/sandbox)
+2. Verás un código como: `join <código-único>`
+3. Desde cada número de WhatsApp que quieres que reciba alertas:
+   - Envía un mensaje al número sandbox: `+1 415 523 8886`
+   - El mensaje debe ser: `join <tu-código>` (ejemplo: `join yellow-tiger`)
+4. Recibirás confirmación de que el número está conectado
+
+**Agregar más números:**
+- En Railway, edita la variable `TWILIO_WHATSAPP_TO`
+- Agrega números separados por coma: `whatsapp:+549XXXXXXXXXX,whatsapp:+5491234567890`
+- Cada número debe estar autorizado en el sandbox de Twilio
+
+## 🎯 Paso 7: Comandos Útiles
 
 ### Actualizar Backend (Railway)
 ```bash
@@ -164,6 +220,12 @@ Vercel redeploya automáticamente.
 - Verifica que las variables estén sin comillas
 - Revisa los logs del backend en Railway
 - Confirma que enviaste `/start` al bot
+
+### WhatsApp no envía mensajes
+- Verifica que el número esté autorizado en el sandbox de Twilio
+- Revisa los logs del backend en Railway
+- Confirma que las credenciales de Twilio sean correctas
+- Asegúrate de que `TWILIO_WHATSAPP_TO` tenga el formato correcto: `whatsapp:+549...`
 
 ## 📊 Monitorear Uso
 

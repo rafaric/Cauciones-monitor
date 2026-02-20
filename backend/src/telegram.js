@@ -105,9 +105,13 @@ function configurarComandos() {
       
       const data = await getCaucionA1Dia();
         const fecha = new Date(data.fecha);
-        const hora = fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        const hora = fecha.toLocaleTimeString('es-AR', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'America/Argentina/Buenos_Aires'
+        });
       
-      const mensaje = `📊 *Caución a 1 día*\n\n` +
+      const mensaje = `📊 *Caución a ${data.plazo}*\n\n` +
               `📈 Tasa: *${data.tasa}%*\n` +
               `🕐 Actualizado: ${hora}\n` +
               (data.simulado ? `⚠️ _Dato simulado (fuera de horario)_` : `✅ origen=IOL`);
