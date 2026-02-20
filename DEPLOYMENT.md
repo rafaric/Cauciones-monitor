@@ -11,7 +11,7 @@ FRONTEND_URL=https://tu-frontend.vercel.app
 TELEGRAM_BOT_TOKEN=tu-token-de-telegram
 TELEGRAM_CHAT_ID=tu-chat-id
 TWILIO_ACCOUNT_SID=tu-account-sid-de-twilio
-TWILIO_AUTH_TOKEN=tu-auth-token-de-twilio
+TWILIO_AUTH_TOKEN=tu-auth-token-de-twilio-auth-token-de-twilio
 TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
 TWILIO_WHATSAPP_TO=whatsapp:+549XXXXXXXXXX
 UMBRAL_MIN=32
@@ -82,7 +82,7 @@ TELEGRAM_CHAT_ID=tu-chat-id
 
 # Twilio para WhatsApp (REQUERIDO)
 TWILIO_ACCOUNT_SID=tu-account-sid-de-twilio
-TWILIO_AUTH_TOKEN=tu-auth-token-de-twilio
+TWILIO_AUTH_TOKEN=tu-auth-token-de-twilio-auth-token-de-twilio
 TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
 TWILIO_WHATSAPP_TO=whatsapp:+549XXXXXXXXXX
 
